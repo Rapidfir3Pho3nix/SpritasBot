@@ -2,18 +2,17 @@
  * Created by Rapidfir3Pho3nix on 4/16/2017.
  */
 
- //TODO: enable welcome message
 const Discord = require("discord.js");
 const client = new Discord.Client();
 
-//load settings file for FlashBot
+//load settings file for SpritasBot
 const settings = require("./settings.json");
 const http = require("http");
 var fs = require('fs');
 
 client.on("ready", () => {
     console.log("Bot is ready!");
-    client.user.setPresence({ game: { name: "with The Spritas" }});
+    client.user.setPresence({ game: { name: "on The Spritas Discord Server" }});
     const spritas = client.guilds.get(settings.spritas_server);
     spritas.owner.createDM().then((channel) => {
         channel.send("Bot is ready!");
@@ -24,45 +23,45 @@ client.on("message", async (message) => {
     //ignore messages from bots
     if(message.author.bot) return;
 
-    //talking to flashbot
-    if(message.mentions.users.has(client.user.id)) {
-        fs.readFile("cleverbot.json", (err, data) => {
-            if(err) console.log(err);
-            var clevState = JSON.parse(data);
-            let input = message.content.replace(/<(.*?)>/g, "").replace(/\s\s+/g, " ").trim().replace(/\\/, "");
-            console.log(message.author.username + " said \"" + input + "\"");
-            let queryUrl = "http://www.cleverbot.com/getreply" + "?key=" + settings.cleverbot_token + "&input=" + input;
-            if(clevState["cs"]) queryUrl += "&cs=" + clevState["cs"];
-            const request = http.get(queryUrl, (response) => {
-                let body = "";
-                response.on("data", (buf) => {
-                    body += buf;
-                });
-                response.on("end", (err) => {
-                    if(err) console.log(err);
-                    const clevObj;
-                    try {
-                        clevObj = JSON.parse(body.toString());
-                    }
-                    catch(error){
-                        clevState["cs"] = "";
-                        fs.writeFile("cleverbot.json", JSON.stringify(clevState), function(err) { if (err) console.log(err); });
-                        message.channel.send(message.author + ", " + "...");
-                        return;
-                    }
-                    clevState["cs"] = clevObj["cs"];
-                    message.channel.send(message.author + ", " + clevObj["output"]);
-                    fs.writeFile("cleverbot.json", JSON.stringify(clevState), function(err) { if (err) console.log(err); });
-                });
-            });
-        });
-    }
+    //talking to spritasbot
+    // if(message.mentions.users.has(client.user.id)) {
+    //     fs.readFile("cleverbot.json", (err, data) => {
+    //         if(err) console.log(err);
+    //         var clevState = JSON.parse(data);
+    //         let input = message.content.replace(/<(.*?)>/g, "").replace(/\s\s+/g, " ").trim().replace(/\\/, "");
+    //         console.log(message.author.username + " said \"" + input + "\"");
+    //         let queryUrl = "http://www.cleverbot.com/getreply" + "?key=" + settings.cleverbot_token + "&input=" + input;
+    //         if(clevState["cs"]) queryUrl += "&cs=" + clevState["cs"];
+    //         const request = http.get(queryUrl, (response) => {
+    //             let body = "";
+    //             response.on("data", (buf) => {
+    //                 body += buf;
+    //             });
+    //             response.on("end", (err) => {
+    //                 if(err) console.log(err);
+    //                 const clevObj;
+    //                 try {
+    //                     clevObj = JSON.parse(body.toString());
+    //                 }
+    //                 catch(error){
+    //                     clevState["cs"] = "";
+    //                     fs.writeFile("cleverbot.json", JSON.stringify(clevState), function(err) { if (err) console.log(err); });
+    //                     message.channel.send(message.author + ", " + "...");
+    //                     return;
+    //                 }
+    //                 clevState["cs"] = clevObj["cs"];
+    //                 message.channel.send(message.author + ", " + clevObj["output"]);
+    //                 fs.writeFile("cleverbot.json", JSON.stringify(clevState), function(err) { if (err) console.log(err); });
+    //             });
+    //         });
+    //     });
+    // }
 
     if(message.content.indexOf(settings.prefix) !== 0) return;
     const args = message.content.slice(settings.prefix.length).split(/ +/g);
     const command = args.shift().toLowerCase();
 
-    //Commands for FlashBot
+    //Commands for SpritasBot
 
     //!help
     if(command === "help") {
@@ -100,17 +99,17 @@ client.on("message", async (message) => {
     }
 
     //!site
-    if(command === "site") message.channel.send("<https://www.thespritas.com/>");
+    if(command === "site") message.channel.send("<https://www.thespritas.net/>");
 
     //!vcam, preloader, intro
-    if(command === "vcam" || command === "preloader" || command === "intro") message.channel.send('<https://www.thespritas.com/t7199-the-spritas-intro-vcams-and-preloaders>');
+    if(command === "vcam" || command === "preloader" || command === "intro") message.channel.send('<https://www.thespritas.net/t7199-the-spritas-intro-vcams-and-preloaders>');
 
     //!tutorial
-    if(command === "tutorial") message.channel.send('<https://www.thespritas.com/t184-how-to-sprite-animate-with-flash>');
+    if(command === "tutorial") message.channel.send('<https://www.thespritas.net/t184-how-to-sprite-animate-with-flash>');
 
     //!parallax
     if(command === "parallax") 
-        message.channel.send('```onClipEvent (load) { \n\t//distance ranges from 0 to 1 \n\tvar distance:Number = 0.2; \n\t//ignore the below stuff \n\tvar x0:Number = this._x; \n\tvar y0:Number = this._y; \n\tvar vcamx0:Number = _root.vcam._x; \n\tvar vcamy0:Number = _root.vcam._y; \n} \n\nonClipEvent (enterFrame) { \n\t_x = (_root.vcam._x - vcamx0) * distance + x0; \n\t_y = (_root.vcam._y - vcamy0) * distance + y0; \n} ```');
+        message.channel.send('```onClipEvent (load) { \n\t//distance ranges from 0 to 1 \n\tvar distance:Number = 0.2; \n\t//ignore the below stuff \n\tvar x0:Number = this._x; \n\tvar y0:Number = this._y; \n\tvar vcamx0:Number = _root.vcam._x; \n\tvar vcamy0:Number = _root.vcam._y; \n} \n\nonClipEvent (enterFrame) { \n\t_x = (_root.vcam._x - vcamx0) * distance + x0; \n\t_y = (_root.vcam._y - vcamy0) * distance + y0; \n}```Tutorial: https://i.imgur.com/ZzfKHuB.png');
 
     //!flash
     if(command === "flash") {
@@ -168,8 +167,8 @@ client.on("message", async (message) => {
 client.on("guildMemberAdd", (member) => {
     member.createDM().then((dmChannel) => {
         dmChannel.send("Welcome to The Spritas Discord Server!"
-        + "\n\nWe are the official Discord server of The Spritas: <https://www.thespritas.com/>"
-        + "\n\n```Hi, I'm FlashBot, nice to meetcha! Right now you may only post to the General channel. In order to post to the other channels you must send me a message that says \"!SPRITAS\" (don't include the quotes). Doing so will make you an honorary Spritan and give you access to the other channels! This also means we will assume you have read the rules for this Discord server, which can be found below. Happy Posting! :)```"
+        + "\n\nWe are the official Discord server of The Spritas: <https://www.thespritas.net/>"
+        + "\n\n```Hi, I'm SpritasBot, nice to meetcha! Right now you may only post to the General channel. In order to post to the other channels you must send me a message that says \"!SPRITAS\" (don't include the quotes). Doing so will make you an honorary Spritan and give you access to the other channels! This also means we will assume you have read the rules for this Discord server, which can be found below. Happy Posting! :)```"
         + "\n\n**SERVER RULES:**"
         + "\n• Use common sense and have respect for others. We do not tolerate bullying or discrimination."
         + "\n• Listen to the moderators and the admins. If you are asked to do something by a member of one of these groups, then do it."
@@ -178,7 +177,7 @@ client.on("guildMemberAdd", (member) => {
         + "\n• Don't spam. Don't spam in the same and/or different channels to get attention."
         + "\n• Links to any illegal downloads or copyrighted material as well as discussion about illegal downloads and copyrighted material is not allowed."
         + "\n• NSFW material may be posted in the #mature channel, however, **Pornographic material is strictly prohibited.**"
-        + "\n• The same rules from the forums apply here as well. Make sure you have read them as well: <https://www.thespritas.com/t7226-basic-forum-rules>"
+        + "\n• The same rules from the forums apply here as well. Make sure you have read them as well: <https://www.thespritas.net/t7226-basic-forum-rules>"
         + "\n\n**VOICE CHANNEL RULES:**"
         + "\n• Be mindful of your audio quality. If you have a lot of background noise/bad mic quality, then use the push-to-talk feature to engage in voice chat. You will be muted for substantially bad audio quality."
         + "\n• Use your inside voice and try to keep loud, disruptive noises to a minimum. Things can be exciting at times but remember that people are there to talk to each other."
