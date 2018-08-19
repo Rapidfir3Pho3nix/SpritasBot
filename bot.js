@@ -7,7 +7,6 @@ const client = new Discord.Client();
 
 //load settings file for SpritasBot
 const settings = require("./settings.json");
-const http = require("http");
 
 client.on("ready", () => {
     let readyMsg = "Bot is ready!";
@@ -30,40 +29,47 @@ client.on("message", async (message) => {
 
     //Commands for SpritasBot
     switch(command){
-        case "help":
+        case "help": {
             let reply = "Current commands: ping, uptime, site, vcam, tutorial, parallax, flash, spritas\nMore details to be added...";           
             replyToMessage(message, reply);
             break;
-        case "ping":
+        }
+        case "ping": {
             // Calculates ping between sending a message and editing it, giving a nice round-trip latency.
             // The second ping is an average latency between the bot and the websocket server (one-way, not round-trip)
             let reply = "Ping?";
             const m = replyToMessage(message, reply);
             m.edit(`Pong! Latency is ${m.createdTimestamp - message.createdTimestamp}ms. API Latency is ${Math.round(client.ping)}ms`);
             break;
-        case "uptime":
+        }
+        case "uptime":{
             let reply = getClientUptimeResponse(message.client);
             replyToMessage(message, reply);
             break;
-        case "site":
+        }
+        case "site":{
             let reply = "<https://www.thespritas.net/>";
             replyToMessage(message, reply)
             break;
+        }
         case "vcam":
         case "preloader":
-        case "intro":
+        case "intro":{
             let reply = "<https://www.thespritas.net/t7199-the-spritas-intro-vcams-and-preloaders>";
             replyToMessage(message, reply);
             break;
-        case "tutorial":
+        }
+        case "tutorial":{
             let reply = "<https://www.thespritas.net/t184-how-to-sprite-animate-with-flash>";
             replyToMessage(message, reply);
             break;
-        case "parallax":
+        }
+        case "parallax":{
             let reply = "```onClipEvent (load) { \n\t//distance ranges from 0 to 1 \n\tvar distance:Number = 0.2; \n\t//ignore the below stuff \n\tvar x0:Number = this._x; \n\tvar y0:Number = this._y; \n\tvar vcamx0:Number = _root.vcam._x; \n\tvar vcamy0:Number = _root.vcam._y; \n} \n\nonClipEvent (enterFrame) { \n\t_x = (_root.vcam._x - vcamx0) * distance + x0; \n\t_y = (_root.vcam._y - vcamy0) * distance + y0; \n}```Tutorial: https://i.imgur.com/ZzfKHuB.png";
             replyToMessage(message, reply);
             break;
-        case "flash":
+        }
+        case "flash":{
             let reply = 'Flash MX = ...what year is it?';
             reply += '\nFlash 8 - has a pacemaker and always tells you to get off its lawn';
             reply += '\nFlash CS3 - literally Jesus';
@@ -76,7 +82,8 @@ client.on("message", async (message) => {
 
             replyToMessage(message, reply);
             break;
-        case "spritas":
+        }
+        case "spritas":{
             //if message is in dm and message author does not have role make them a Spritan
             if(message.channel.type == "dm" || message.channel.type == "group") {
                 const spritas = client.guilds.get(settings.spritas_server);
@@ -102,6 +109,7 @@ client.on("message", async (message) => {
             else 
                 replyToMessage(message, "If you\'re trying to change your role to Spritan, then you need to send me a DM saying \"!SPRITAS\" and then I can change your role.");       
             break;
+        }
         default:
             break;
     }
@@ -129,14 +137,14 @@ client.on("guildMemberAdd", (member) => {
     .catch(console.error);
 });
 
-function replyToMessage(message, reply){
+async function replyToMessage(message, reply) {
     await message.channel.send(reply)
         .then(message => console.log(`Sent message: ${message.content} to ${message.author.username}`))
         .catch(console.error);
     return message;
 }
 
-function getClientUptimeResponse(client){
+function getClientUptimeResponse(client) {
     let uptime = client.uptime / 1000; //total uptime in seconds
     let days = Math.floor(uptime / 86400);
     uptime %= 86400;
