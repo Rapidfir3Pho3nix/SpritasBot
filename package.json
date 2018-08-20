@@ -1,23 +1,19 @@
 {
-  "name": "flashbot",
-  "version": "0.0.1",
-  "description": "Bot for The Spritas Discord",
-  "main": "bot.js",
+  "name": "spritasbot",
+  "version": "1.0.0",
+  "description": "Discord Bot for The Spritas Discord server.",
+  "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Rapidfir3Pho3nix/SpritasBot.git"
+  },
   "author": "Rapidfir3Pho3nix",
   "license": "ISC",
-  "dependencies": {
-    "bufferutil": "^3.0.3",
-    "discord.js": "^11.4.2",
-    "erlpack": "github:discordapp/erlpack",
-    "install": "^0.10.4",
-    "libsodium-wrappers": "^0.5.4",
-    "node-opus": "^0.2.9",
-    "npm": "^6.4.0",
-    "sodium": "^2.0.3",
-    "sqlite": "^2.9.1",
-    "uws": "^0.14.5"
-  }
+  "bugs": {
+    "url": "https://github.com/Rapidfir3Pho3nix/SpritasBot/issues"
+  },
+  "homepage": "https://github.com/Rapidfir3Pho3nix/SpritasBot#readme"
 }
