@@ -4,7 +4,7 @@ module.exports = {
     name: "site",
     aliases: ["website", "forum"],
     description: "Get link to The Spritas forum.",
-    execute(message, args) {
+    async execute(message, args) {
         replyToMessage(message, spritas_site);
     },
 };

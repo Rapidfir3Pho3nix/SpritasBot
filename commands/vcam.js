@@ -4,7 +4,7 @@ module.exports = {
     name: "vcam",
     aliases: ["preloader", "intro"],
     description: "Get link to The Spritas vcam (AS2 and AS3), preloader (AS2 and AS3), and video intro.",
-    execute(message, args) {
+    async execute(message, args) {
         replyToMessage(message, spritas_vcam)
     },
 };

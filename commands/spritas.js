@@ -3,10 +3,10 @@ const { spritas_server } = require("../config.json");
 module.exports = {
     name: "spritas",
     description: "Used to get Spritan role from FlashBot. Using this command means you acknowledge that you're aware of the rules on this server.",
-    execute(message, args) {
+    async execute(message, args) {
         //if message is in dm and message author does not have role make them a Spritan
         if(message.channel.type == "dm" || message.channel.type == "group") {
-            const spritas = client.guilds.get(spritas_server);
+            const spritas = message.client.guilds.get(spritas_server);
 
             if(!spritas.available) return;
 

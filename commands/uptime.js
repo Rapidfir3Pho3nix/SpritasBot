@@ -1,7 +1,7 @@
 module.exports = {
     name: "uptime",
     description: "Get the duration of how long SpritasBot has been active.",
-    execute(message, args) {       
+    async execute(message, args) {       
         let uptime = message.client.uptime / 1000; //total uptime in seconds
         let days = Math.floor(uptime / 86400);
         uptime %= 86400;

@@ -4,7 +4,7 @@ module.exports = {
     name: "tutorial",
     aliases: ["tutorials", "tut", "tuts"],
     description: "Get link to Eric's flash tutorials on The Spritas.",
-    execute(message, args) {
+    async execute(message, args) {
         replyToMessage(message, spritas_tutorial);
     },
 };
