@@ -4,6 +4,7 @@ pm2_logs.txt
 stderr.txt
 stderr.txt.save
 stdout.txt
+config.json
 .idea
 
 .DS_Store*
