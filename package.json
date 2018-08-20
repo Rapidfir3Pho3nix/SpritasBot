@@ -15,5 +15,9 @@
   "bugs": {
     "url": "https://github.com/Rapidfir3Pho3nix/SpritasBot/issues"
   },
-  "homepage": "https://github.com/Rapidfir3Pho3nix/SpritasBot#readme"
+  "homepage": "https://github.com/Rapidfir3Pho3nix/SpritasBot#readme",
+  "dependencies": {
+    "discord.js": "^11.4.2",
+    "node-opus": "^0.3.0"
+  }
 }
