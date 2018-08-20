@@ -4,7 +4,7 @@
 
 const fs = require("fs");
 const Discord = require("discord.js");
-const { prefix, discord_token } = require("./config.json");
+const { prefix, discord_token, spritas_server } = require("./config.json");
 
 const client = new Discord.Client();
 client.commands = new Discord.Collection();
@@ -20,7 +20,7 @@ client.on("ready", () => {
     let readyMsg = "Bot is ready!";
     console.log(readyMsg);
     client.user.setPresence({ game: { name: "on The Spritas Discord Server" }});
-    const spritas = client.guilds.get(config.spritas_server);
+    const spritas = client.guilds.get(spritas_server);
     spritas.owner.createDM().then((channel) => { channel.send(readyMsg); });
 });
 
