@@ -7,7 +7,7 @@ module.exports = {
     async execute(message, args) {
         const spritas = message.client.guilds.get(spritas_server);
         if(spritas.owner.user.username.indexOf("Rapidfir3Pho3nix") < 0) return;
-        if(!args[0]) message.member.createDM().then((channel) => { channel.send("No YouTube URL argument provided."); });
+        if(!args[0]) message.author.createDM().then((channel) => { channel.send("No YouTube URL argument provided."); });
 
         // Only try to join the sender's voice channel if they are in one themselves
         const voiceChannel = message.member.voiceChannel;
@@ -15,16 +15,16 @@ module.exports = {
             const permissions = voiceChannel.permissionsFor(message.client.user);
 
             if(!permissions.has("CONNECT")){
-                message.member.createDM().then((channel) => { channel.send("Can't connect to voice channel. Check permissions."); });
+                message.author.createDM().then((channel) => { channel.send("Can't connect to voice channel. Check permissions."); });
             }
 
             if(!permissions.has("CONNECT")){
-                message.member.createDM().then((channel) => { channel.send("Can't speak in voice channel. Check permissions."); });
+                message.author.createDM().then((channel) => { channel.send("Can't speak in voice channel. Check permissions."); });
             }
 
             try {
                 const connection = await voiceChannel.join();
-                message.member.createDM().then((channel) => { channel.send("I have connected to the channel."); });
+                message.author.createDM().then((channel) => { channel.send("I have connected to the channel."); });
 
                 const dispatcher = connection.playStream(ytdl(args[0]))
                     .on("end", () => {
@@ -39,11 +39,11 @@ module.exports = {
             }
             catch (error){
                 console.error(`Could not connect to the voice channel: ${error}`);
-                message.member.createDM().then((channel) => { channel.send(`Could not connect to the voice channel: ${error}`); });
+                message.author.createDM().then((channel) => { channel.send(`Could not connect to the voice channel: ${error}`); });
             }
         } 
         else {
-            message.member.createDM().then((channel) => { channel.send("You need to be in the voice channel first."); });
+            message.author.createDM().then((channel) => { channel.send("You need to be in the voice channel first."); });
         }
     },
 };
