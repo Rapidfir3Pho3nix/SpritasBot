@@ -18,6 +18,8 @@
   "homepage": "https://github.com/Rapidfir3Pho3nix/SpritasBot#readme",
   "dependencies": {
     "discord.js": "^11.4.2",
-    "node-opus": "^0.3.0"
+    "ffmpeg-binaries": "^4.0.0",
+    "node-opus": "^0.3.0",
+    "ytdl-core": "^0.24.0"
   }
 }
