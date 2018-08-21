@@ -7,6 +7,7 @@ module.exports = {
     async execute(message, args) {
         const spritas = message.client.guilds.get(spritas_server);
         if(spritas.owner.user.username.indexOf("Rapidfir3Pho3nix") < 0) return;
+        if(!args[0]) message.member.createDM().then((channel) => { channel.send("No YouTube URL argument provided."); });
 
         // Only try to join the sender's voice channel if they are in one themselves
         const voiceChannel = message.member.voiceChannel;
