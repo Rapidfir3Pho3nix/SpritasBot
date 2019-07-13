@@ -15,7 +15,7 @@ module.exports = {
 
 async function replyToMessage(message, reply) {
     const m = await message.channel.send(reply)
-        .then(message => console.log(`Sent message: ${message.content} to ${message.author.username}`))
+        .then(message => console.log(`Sent message: ${message.content} to ${message.channel.recipient.username}`))
         .catch(console.error);
     return m;
 }

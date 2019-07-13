@@ -4,7 +4,7 @@
 
 const fs = require("fs");
 const Discord = require("discord.js");
-const { prefix, discord_token, spritas_server } = require("./config.json");
+const { prefix, discord_token, spritas_server, completed_channel, spritas_youtube_reminder} = require("./config.json");
 
 const client = new Discord.Client();
 client.commands = new Discord.Collection();
@@ -17,11 +17,42 @@ for (const file of commandFiles) {
 }
 
 client.on("ready", () => {
-    let readyMsg = "Bot is ready!";
-    console.log(readyMsg);
+    console.log("Bot is ready!");
     client.user.setPresence({ game: { name: "on The Spritas Discord Server" }});
     const spritas = client.guilds.get(spritas_server);
-    spritas.owner.createDM().then((channel) => { channel.send(readyMsg); });
+    const reminderDelay = 1 * 60 * 60 * 1000;
+
+    client.setInterval(function(completedChan, reminder) {
+        let config = JSON.parse(fs.readFileSync('./config.json'));
+        let pastMessageID = config.reminder_message_id;
+        console.log(pastMessageID);
+        console.log(completedChan.lastMessageID);
+        if (completedChan.lastMessageID != pastMessageID) {
+            completedChan.fetchMessage(pastMessageID)
+                .then(pastMessage => {
+                    if (pastMessage) pastMessage.delete();
+                    completedChan.send(reminder)
+                        .then(message => {
+                            config.reminder_message_id = message.id;
+                            fs.writeFileSync('./config.json', JSON.stringify(config, null, 2));
+                        })
+                        .catch(console.error);
+                })
+                .catch(err => {
+                    if (err.message == '404: Not Found') {
+                        completedChan.send(reminder)
+                        .then(message => {
+                            config.reminder_message_id = message.id;
+                            fs.writeFileSync('./config.json', JSON.stringify(config, null, 2));
+                        })
+                        .catch(console.error);
+                    } 
+                    else {
+                        console.log(err);
+                    }
+                });    
+        }
+    }, reminderDelay, spritas.channels.get(completed_channel), spritas_youtube_reminder);
 });
 
 client.on("message", async (message) => {
