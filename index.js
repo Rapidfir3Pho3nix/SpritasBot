@@ -74,7 +74,12 @@ client.on("ready", () => {
         //join music channel and keep playing music until stop command
         let musicChan = spritas.channels.get(music_channel);
         musicChan.join().then(connection => {
-            playMusicStream(connection);
+            try {
+                playMusicStream(connection);
+            } 
+            catch(err){
+                console.log(err)
+            }
         });
     }
     catch (error){
@@ -104,7 +109,13 @@ client.on("message", async (message) => {
             //join music channel and keep playing music until stop command
             let musicChan = spritas.channels.get(music_channel);
             musicChan.join().then(connection => {
-                playMusicStream(connection);
+                try {
+                    console.log("playing music");
+                    playMusicStream(connection);
+                } 
+                catch(err){
+                    console.log(err)
+                }
             });
         }
         catch (error){
@@ -158,6 +169,7 @@ client.login(discord_token);
 function playMusicStream(voiceConnection) {
     try {
         let url = queue[queueIndex];
+        console.log(url);
         ytdl.getInfo(url).then(songInfo => {
             const song = {
                 id: songInfo.video_id,
