@@ -169,7 +169,6 @@ client.login(discord_token);
 function playMusicStream(voiceConnection) {
     try {
         let url = queue[queueIndex];
-        console.log(url);
         ytdl.getInfo(url).then(songInfo => {
             const song = {
                 id: songInfo.video_id,
@@ -179,27 +178,32 @@ function playMusicStream(voiceConnection) {
             client.user.setPresence({ game: { name: "playing " + song.title }});
 
             ytdlDiscord(song.url).then(input => {
-                const pcm = input.pipe(new prism.opus.Decoder({ rate: 48000, channels: 2, frameSize: 960 }));
-                let dispatcher = voiceConnection.playConvertedStream(pcm);
-                dispatcher.setVolumeLogarithmic(0.25);
+                try {
+                    const pcm = input.pipe(new prism.opus.Decoder({ rate: 48000, channels: 2, frameSize: 960 }));
+                    let dispatcher = voiceConnection.playConvertedStream(pcm);
+                    dispatcher.setVolumeLogarithmic(0.25);
 
-                dispatcher.on("end", (reason) => {
-                    dispatcher = null;
-                    queueIndex = (queueIndex + 1) % queue.length;
-                    if (queueIndex == 0) shuffle(queue);
-                    console.log(reason);
-                    if (playMusic) playMusicStream(voiceConnection);
-                    else {
+                    dispatcher.on("end", (reason) => {
+                        dispatcher = null;
+                        queueIndex = (queueIndex + 1) % queue.length;
+                        if (queueIndex == 0) shuffle(queue);
+                        console.log(reason);
+                        if (playMusic) playMusicStream(voiceConnection);
+                        else {
+                            voiceConnection.channel.leave();
+                        }
+                    })
+                    .on('error', (error) => {
+                        dispatcher = null;
+                        console.error(error);
                         voiceConnection.channel.leave();
-                    }
-                })
-                .on('error', (error) => {
-                    dispatcher = null;
-                    console.error(error);
-                    voiceConnection.channel.leave();
-                    const spritas = voiceConnection.client.guilds.get(spritas_server);
-                    spritas.owner.createDM().then((channel) => { channel.send(error); });
-                });
+                        const spritas = voiceConnection.client.guilds.get(spritas_server);
+                        spritas.owner.createDM().then((channel) => { channel.send(error); });
+                    });
+                }
+                catch (error) {
+                    console.log(error);
+                }
             });
         });
     }
