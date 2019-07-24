@@ -3,11 +3,20 @@
  */
 
 const fs = require("fs");
+const csv = require("csv-parser");
 const Discord = require("discord.js");
-const { prefix, discord_token, spritas_server, completed_channel, spritas_youtube_reminder} = require("./config.json");
+const { Util } = require('discord.js');
+const { prefix, discord_token, spritas_server, completed_channel, music_channel, spritas_youtube_reminder} = require("./config.json");
+const ytdl = require("ytdl-core");
+const ytdlDiscord = require("ytdl-core-discord");
+const prism = require('prism-media');
 
 const client = new Discord.Client();
 client.commands = new Discord.Collection();
+
+queue = [];
+queueIndex = 0;
+playMusic = true;
 
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
 
@@ -18,15 +27,12 @@ for (const file of commandFiles) {
 
 client.on("ready", () => {
     console.log("Bot is ready!");
-    client.user.setPresence({ game: { name: "on The Spritas Discord Server" }});
     const spritas = client.guilds.get(spritas_server);
-    const reminderDelay = 1 * 60 * 60 * 1000;
+    const reminderDelay = 2 * 60 * 60 * 1000;
 
     client.setInterval(function(completedChan, reminder) {
         let config = JSON.parse(fs.readFileSync('./config.json'));
         let pastMessageID = config.reminder_message_id;
-        console.log(pastMessageID);
-        console.log(completedChan.lastMessageID);
         if (completedChan.lastMessageID != pastMessageID) {
             completedChan.fetchMessage(pastMessageID)
                 .then(pastMessage => {
@@ -48,11 +54,33 @@ client.on("ready", () => {
                         .catch(console.error);
                     } 
                     else {
-                        console.log(err);
+                        spritas.owner.createDM().then((channel) => { channel.send(error); });
                     }
                 });    
         }
     }, reminderDelay, spritas.channels.get(completed_channel), spritas_youtube_reminder);
+
+    //read playlist url
+    fs.createReadStream('./playlist.csv')
+        .pipe(csv())
+        .on('data', (row) => {
+            queue.push(row["Video URL"]);
+        })
+        .on('end', () => {
+            shuffle(queue);
+        });
+
+    try {
+        //join music channel and keep playing music until stop command
+        let musicChan = spritas.channels.get(music_channel);
+        musicChan.join().then(connection => {
+            playMusicStream(connection);
+        });
+    }
+    catch (error){
+        console.log(error);
+        spritas.owner.createDM().then((channel) => { channel.send(error); });
+    }
 });
 
 client.on("message", async (message) => {
@@ -62,6 +90,29 @@ client.on("message", async (message) => {
     //get command and arguemnts
     const args = message.content.slice(prefix.length).split(/ +/g);
     const commandName = args.shift().toLowerCase();
+
+    if (message.author.username.indexOf("Rapidfir3Pho3nix") >= 0 && commandName == "stop") {
+        playMusic = false;
+        return;
+    }
+
+    if (message.author.username.indexOf("Rapidfir3Pho3nix") >= 0 && commandName == "play") {
+        playMusic = true;
+        shuffle(queue);
+        const spritas = client.guilds.get(spritas_server);
+        try {
+            //join music channel and keep playing music until stop command
+            let musicChan = spritas.channels.get(music_channel);
+            musicChan.join().then(connection => {
+                playMusicStream(connection);
+            });
+        }
+        catch (error){
+            console.log(error);
+            spritas.owner.createDM().then((channel) => { channel.send(error); });
+        }
+        return;
+    }
 
     //if command does not exist return
     if (!client.commands.has(commandName)) return;
@@ -80,7 +131,7 @@ client.on("message", async (message) => {
     }
 });
 
-client.on("guildMemberAdd", (member) => {
+client.on("guildMemberAdd", async (member) => {
     member.createDM().then((dmChannel) => {
         dmChannel.send("Welcome to The Spritas Discord Server!"
         + "\n\nWe are the official Discord server of The Spritas: <https://www.thespritas.net/>"
@@ -103,3 +154,53 @@ client.on("guildMemberAdd", (member) => {
 });
 
 client.login(discord_token);
+
+function playMusicStream(voiceConnection) {
+    try {
+        let url = queue[queueIndex];
+        ytdl.getInfo(url).then(songInfo => {
+            const song = {
+                id: songInfo.video_id,
+                title: Util.escapeMarkdown(songInfo.title),
+                url: songInfo.video_url
+            };
+            client.user.setPresence({ game: { name: "playing " + song.title }});
+
+            ytdlDiscord(song.url).then(input => {
+                const pcm = input.pipe(new prism.opus.Decoder({ rate: 48000, channels: 2, frameSize: 960 }));
+                let dispatcher = voiceConnection.playConvertedStream(pcm);
+                dispatcher.setVolumeLogarithmic(0.25);
+
+                dispatcher.on("end", (reason) => {
+                    dispatcher = null;
+                    queueIndex = (queueIndex + 1) % queue.length;
+                    if (queueIndex == 0) shuffle(queue);
+                    console.log(reason);
+                    if (playMusic) playMusicStream(voiceConnection);
+                    else {
+                        voiceConnection.channel.leave();
+                    }
+                })
+                .on('error', (error) => {
+                    dispatcher = null;
+                    console.error(error);
+                    voiceConnection.channel.leave();
+                    const spritas = voiceConnection.client.guilds.get(spritas_server);
+                    spritas.owner.createDM().then((channel) => { channel.send(error); });
+                });
+            });
+        });
+    }
+    catch(err) {
+        console.error(err);
+        spritas.owner.createDM().then((channel) => { channel.send(error); });
+    }
+}
+
+function shuffle(a) {
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}

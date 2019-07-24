@@ -2,10 +2,10 @@ const { spritas_server } = require("../config.json");
 const ytdl = require("ytdl-core");
 const ytdlDiscord = require("ytdl-core-discord");
 const { Util } = require('discord.js');
-const prism = require('prism-media')
+const prism = require('prism-media');
 
 module.exports = {
-    name: "play",
+    name: "__play",
     description: "",
     async execute(message, args) {
         const spritas = message.client.guilds.get(spritas_server);
@@ -40,25 +40,15 @@ module.exports = {
 
             try {
                 const connection = await voiceChannel.join();
-                message.member.createDM().then((channel) => { channel.send("I have connected to the channel."); });
+                
                 const input = await ytdlDiscord(song.url);
                 const pcm = input.pipe(new prism.opus.Decoder({ rate: 48000, channels: 2, frameSize: 960 }));
                 const dispatcher = connection.playConvertedStream(pcm);
                 dispatcher.setVolumeLogarithmic(0.25);
-                                    
-                // const dispatcher = connection.playOpusStream(await ytdlDiscord(song.url, { volume: 0.5 }))
-                //     .on("end", (reason) => {
-                //         console.log("stream ended");
-                //         console.log(reason);
-                //         voiceChannel.leave();
-                //     })
-                //     .on('error', error => console.error(error));
-                // dispatcher.setVolumeLogarithmic(2 / 5);
             }
             catch (error){
                 console.log(error);
-                console.error(`Could not connect to the voice channel: ${error}`);
-                message.member.createDM().then((channel) => { channel.send(`Could not connect to the voice channel: ${error}`); });
+                spritas.owner.createDM().then((channel) => { channel.send(error); });
             }
         } 
         else {

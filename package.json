@@ -19,6 +19,7 @@
   "dependencies": {
     "@discordjs/uws": "^11.149.1",
     "better-sqlite-pool": "^0.2.2",
+    "csv-parser": "^2.3.0",
     "discord.js": "^11.5.1",
     "enmap": "^5.0.0",
     "erlpack": "github:discordapp/erlpack",
