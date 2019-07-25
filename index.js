@@ -187,7 +187,6 @@ function playMusicStream(voiceConnection) {
                         dispatcher = null;
                         queueIndex = (queueIndex + 1) % queue.length;
                         if (queueIndex == 0) shuffle(queue);
-                        console.log(reason);
                         if (playMusic) playMusicStream(voiceConnection);
                         else {
                             voiceConnection.channel.leave();
@@ -209,7 +208,7 @@ function playMusicStream(voiceConnection) {
     }
     catch(err) {
         console.error(err);
-        spritas.owner.createDM().then((channel) => { channel.send(error); });
+        spritas.owner.createDM().then((channel) => { channel.send(err); });
     }
 }
 
