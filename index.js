@@ -157,7 +157,6 @@ function playMusicStream(voiceConnection) {
     })
     .catch(error => {
         console.log("error encountered using input from ytdldiscord:", error);
-        console.log("songRes:", songRes);
         console.log("input:", input);
         playNextSong(voiceConnection)
     });
