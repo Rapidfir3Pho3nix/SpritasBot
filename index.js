@@ -5,7 +5,8 @@
 const fs = require("fs");
 const csv = require("csv-parser");
 const Discord = require("discord.js");
-const { prefix, discord_token, spritas_server, completed_channel, music_channel, spritas_youtube_reminder} = require("./config.json");
+const { prefix, discord_token, spritas_server, completed_channel, music_channel, spritas_youtube_reminder, role_assignment_message_id, role_assignment_message, role_assignment_channel, 
+    spritan_role_assign_emoji, collab_role_assign_emoji, gamer_role_assign_emoji, degen_role_assign_emoji, spritan_role, collab_role, gamer_role, degen_role } = require("./config.json");
 const ytdlDiscord = require("ytdl-core-discord");
 const prism = require('prism-media');
 
@@ -34,10 +35,33 @@ client.on("ready", () => {
     const spritas = client.guilds.get(spritas_server);
     const reminderDelay = 2 * 60 * 60 * 1000;
 
+    // set up role reaction if necessary
+    if (!role_assignment_message_id) {
+        const roleChan = spritas.channels.get(role_assignment_channel);
+        const spritanEmoji = spritas.emojis.find(emoji => emoji.name === spritan_role_assign_emoji);
+        const collabEmoji = spritas.emojis.find(emoji => emoji.name === collab_role_assign_emoji);
+        const gamerEmoji = spritas.emojis.find(emoji => emoji.name === gamer_role_assign_emoji);
+        const degenEmoji = spritas.emojis.find(emoji => emoji.name === degen_role_assign_emoji);
+        const roleEmbed = new Discord.RichEmbed()
+            .setColor('#0099ff')
+            .setTitle('Role Assignment')
+            .setDescription(role_assignment_message)
+            .addField('Spritan role', `${spritanEmoji} - Grants access to the server.`, false)
+            .addField('Collaboration role', `${collabEmoji} - Grants access to the collaberation area.`, false)
+            .addField('Gamer role', `${gamerEmoji} - Having this role means you will be mentioned whenever we have any video game related events.`, false)
+            .addField('Degen role', `${degenEmoji} - Grants access to the waifu channel.`, false);
+
+        roleChan.send(roleEmbed).then(message => {
+            let config = JSON.parse(fs.readFileSync('./config.json'));
+            config.role_assignment_message_id = message.id;
+            fs.writeFileSync('./config.json', JSON.stringify(config, null, 2));
+        });
+    }
+
     // set interval for reminder message in #completed channel
     client.setInterval(function(completedChan, reminder) {
 
-        // read config for previous reminder message ID
+        // read config for previous reminder message ID and role assignment message ID
         let config = JSON.parse(fs.readFileSync('./config.json'));
         let pastMessageID = config.reminder_message_id;
 
@@ -107,27 +131,109 @@ client.on("message", async (message) => {
     }
 });
 
-client.on("guildMemberAdd", async (member) => {
-    member.createDM().then((dmChannel) => {
-        dmChannel.send("Welcome to The Spritas Discord Server!"
-        + "\n\nWe are the official Discord server of The Spritas: <https://www.thespritas.net/>"
-        + "\n\n```Hi, I'm SpritasBot, nice to meetcha! Right now you may only post to the General channel. In order to post to the other channels you must send me a message that says \"!SPRITAS\" (don't include the quotes). Doing so will make you an honorary Spritan and give you access to the other channels! This also means we will assume you have read the rules for this Discord server, which can be found below. Happy Posting! :)```"
-        + "\n\n**SERVER RULES:**"
-        + "\n• Use common sense and have respect for others. We do not tolerate bullying or discrimination."
-        + "\n• Listen to the moderators and the admins. If you are asked to do something by a member of one of these groups, then do it."
-        + "\n• Try to discuss topics in their appropriate channels; e.g. talk about video games goes in #gaming."
-        + "\n• If you have an issue with another member try to alert an online moderator or admin."
-        + "\n• Don't spam. Don't spam in the same and/or different channels to get attention."
-        + "\n• Links to any illegal downloads or copyrighted material as well as discussion about illegal downloads and copyrighted material is not allowed."
-        + "\n• NSFW material may be posted in the #mature channel, however, **Pornographic material is strictly prohibited.**"
-        + "\n• The same rules from the forums apply here as well. Make sure you have read them as well: <https://www.thespritas.net/t7226-basic-forum-rules>"
-        + "\n\n**VOICE CHANNEL RULES:**"
-        + "\n• Be mindful of your audio quality. If you have a lot of background noise/bad mic quality, then use the push-to-talk feature to engage in voice chat. You will be muted for substantially bad audio quality."
-        + "\n• Use your inside voice and try to keep loud, disruptive noises to a minimum. Things can be exciting at times but remember that people are there to talk to each other."
-        + "\n\nPlease enjoy your stay!");
-    })
-    .catch(console.error);
+client.on('raw', event => {
+    let config = JSON.parse(fs.readFileSync('./config.json'));
+
+    const eventName = event.t;
+    if (eventName === 'MESSAGE_REACTION_ADD') {
+        if (event.d.message_id == config.role_assignment_message_id) {
+            let roleChan = client.guilds.get(spritas_server).channels.get(event.d.channel_id);
+            if (roleChan.messages.has(event.d.message_id)) return;
+            else {
+                roleChan.fetchMessage(event.d.message_id).then(message => {
+                    let reaction = message.reactions.get(event.d.emoji.name + ":" + event.d.emoji.id);
+                    let user = client.guilds.get(spritas_server).members.get(event.d.user_id);
+                    client.emit('messageReactionAdd', reaction, user);
+                })
+                .catch(err => console.log(err));
+            }
+        }
+    } 
+    else if (eventName === 'MESSAGE_REACTION_REMOVE') {
+        if (event.d.message_id == config.role_assignment_message_id) {
+            let roleChan = client.guilds.get(spritas_server).channels.get(event.d.channel_id);
+            if (roleChan.messages.has(event.d.message_id)) return;
+            else {
+                roleChan.fetchMessage(event.d.message_id).then(message => {
+                    let reaction = message.reactions.get(event.d.emoji.name + ":" + event.d.emoji.id);
+                    let user = client.guilds.get(spritas_server).members.get(event.d.user_id);
+                    client.emit('messageReactionRemove', reaction, user);
+                })
+                .catch(err => console.log(err));
+            }
+        }
+    }
 });
+
+client.on('messageReactionAdd', (messageReaction, user) => {
+    let spritas = client.guilds.get(spritas_server);
+    let emojiName = messageReaction.emoji.name;
+    let member = spritas.members.get(user.id);
+    let role = null;
+    switch(emojiName) {
+        case spritan_role_assign_emoji:
+            role = spritas.roles.get(spritan_role);           
+            break;
+        case collab_role_assign_emoji:
+            role = spritas.roles.get(collab_role);
+            break;
+        case gamer_role_assign_emoji:
+            role = spritas.roles.get(gamer_role);
+            break;
+        case degen_role_assign_emoji:
+            role = spritas.roles.get(degen_role);
+            break;
+        default:
+            break;
+    }
+    if (role && member) member.addRole(role.id);
+});
+
+client.on('messageReactionRemove', (messageReaction, user) => {
+    let spritas = client.guilds.get(spritas_server);
+    let emojiName = messageReaction.emoji.name;
+    let member = spritas.members.get(user.id);
+    let role = null;
+    switch(emojiName) {
+        case spritan_role_assign_emoji:
+            role = spritas.roles.get(spritan_role);           
+            break;
+        case collab_role_assign_emoji:
+            role = spritas.roles.get(collab_role);
+            break;
+        case gamer_role_assign_emoji:
+            role = spritas.roles.get(gamer_role);
+            break;
+        case degen_role_assign_emoji:
+            role = spritas.roles.get(degen_role);
+            break;
+        default:
+            break;
+    }
+    if (role && member) member.removeRole(role.id);
+});
+
+// client.on("guildMemberAdd", async (member) => {
+//     member.createDM().then((dmChannel) => {
+//         dmChannel.send("Welcome to The Spritas Discord Server!"
+//         + "\n\nWe are the official Discord server of The Spritas: <https://www.thespritas.net/>"
+//         + "\n\n```Hi, I'm SpritasBot, nice to meetcha! Right now you may only post to the General channel. In order to post to the other channels you must send me a message that says \"!SPRITAS\" (don't include the quotes). Doing so will make you an honorary Spritan and give you access to the other channels! This also means we will assume you have read the rules for this Discord server, which can be found below. Happy Posting! :)```"
+//         + "\n\n**SERVER RULES:**"
+//         + "\n• Use common sense and have respect for others. We do not tolerate bullying or discrimination."
+//         + "\n• Listen to the moderators and the admins. If you are asked to do something by a member of one of these groups, then do it."
+//         + "\n• Try to discuss topics in their appropriate channels; e.g. talk about video games goes in #gaming."
+//         + "\n• If you have an issue with another member try to alert an online moderator or admin."
+//         + "\n• Don't spam. Don't spam in the same and/or different channels to get attention."
+//         + "\n• Links to any illegal downloads or copyrighted material as well as discussion about illegal downloads and copyrighted material is not allowed."
+//         + "\n• NSFW material may be posted in the #mature channel, however, **Pornographic material is strictly prohibited.**"
+//         + "\n• The same rules from the forums apply here as well. Make sure you have read them as well: <https://www.thespritas.net/t7226-basic-forum-rules>"
+//         + "\n\n**VOICE CHANNEL RULES:**"
+//         + "\n• Be mindful of your audio quality. If you have a lot of background noise/bad mic quality, then use the push-to-talk feature to engage in voice chat. You will be muted for substantially bad audio quality."
+//         + "\n• Use your inside voice and try to keep loud, disruptive noises to a minimum. Things can be exciting at times but remember that people are there to talk to each other."
+//         + "\n\nPlease enjoy your stay!");
+//     })
+//     .catch(console.error);
+// });
 
 client.login(discord_token);
 
@@ -157,7 +263,7 @@ function playMusicStream(voiceConnection) {
     })
     .catch(error => {
         console.log("error encountered using input from ytdldiscord:", error);
-        console.log("input:", input);
+
         playNextSong(voiceConnection)
     });
 }
