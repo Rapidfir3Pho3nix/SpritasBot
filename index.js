@@ -6,9 +6,13 @@ const fs = require("fs");
 const csv = require("csv-parser");
 const Discord = require("discord.js");
 const { prefix, discord_token, spritas_server, completed_channel, music_channel, spritas_youtube_reminder, role_assignment_message_id, role_assignment_message, role_assignment_channel, 
-    spritan_role_assign_emoji, collab_role_assign_emoji, gamer_role_assign_emoji, degen_role_assign_emoji, spritan_role, collab_role, gamer_role, degen_role } = require("./config.json");
+    spritan_role_assign_emoji, announcements_role_assign_emoji, collab_role_assign_emoji, gamer_role_assign_emoji, 
+    spritan_role, announcements_role, collab_role, gamer_role 
+} = require("./config.json");
 const ytdlDiscord = require("ytdl-core-discord");
 const prism = require('prism-media');
+
+const { finished } = require('stream');
 
 const client = new Discord.Client();
 client.commands = new Discord.Collection();
@@ -31,7 +35,7 @@ for (const file of commandFiles) {
 
 // set up functionality when bot is ready
 client.on("ready", () => {
-    console.log("Bot is ready!");
+    log(false, "Bot is ready!");
     const spritas = client.guilds.get(spritas_server);
     const reminderDelay = 2 * 60 * 60 * 1000;
 
@@ -41,15 +45,15 @@ client.on("ready", () => {
         const spritanEmoji = spritas.emojis.find(emoji => emoji.name === spritan_role_assign_emoji);
         const collabEmoji = spritas.emojis.find(emoji => emoji.name === collab_role_assign_emoji);
         const gamerEmoji = spritas.emojis.find(emoji => emoji.name === gamer_role_assign_emoji);
-        const degenEmoji = spritas.emojis.find(emoji => emoji.name === degen_role_assign_emoji);
+        const announceEmoji = spritas.emojis.find(emoji => emoji.name === announcements_role_assign_emoji);
         const roleEmbed = new Discord.RichEmbed()
             .setColor('#0099ff')
             .setTitle('Role Assignment')
             .setDescription(role_assignment_message)
-            .addField('Spritan role', `${spritanEmoji} - Grants access to the server.`, false)
-            .addField('Collaboration role', `${collabEmoji} - Grants access to the collaberation area.`, false)
-            .addField('Gamer role', `${gamerEmoji} - Having this role means you will be mentioned whenever we have any video game related events.`, false)
-            .addField('Degen role', `${degenEmoji} - Grants access to the waifu channel.`, false);
+            .addField('Spritan role', `${spritanEmoji} - Grants basic access to the server.`, false)
+            .addField('Announcements role', `${announceEmoji} - This role will let you be notified when there are any server announcements made so that you are up to date with events going on in the server.`, false)
+            .addField('Collaboration role', `${collabEmoji} - Grants access to the Spritas collaborations area and will let you be notified about any collab-related announcements.`, false)
+            .addField('Gamer role', `${gamerEmoji} - This role will let you be notified whenever we have any video game related events.`, false);
 
         roleChan.send(roleEmbed).then(message => {
             let config = JSON.parse(fs.readFileSync('./config.json'));
@@ -68,17 +72,17 @@ client.on("ready", () => {
         // if current latest message ID does not match the ID for the last reminder message, delete the last reminder message, resend a new reminder message, and store new reminder message ID in config file
         if (completedChan.lastMessageID != pastMessageID) {
             completedChan.fetchMessage(pastMessageID).then(pastMessage => {
-                console.log("grabbed previous message:", pastMessageID);
+                log(false, "grabbed previous message:", pastMessageID);
                 pastMessage.delete().then(msg => {
-                    console.log("previous message deleted:", msg);
+                    log(false, "previous message deleted:", msg);
                     completedChan.send(reminder).then(message => {
-                        console.log("sent new message:", message.id)
+                        log(false, "sent new message:", message.id)
                         config.reminder_message_id = message.id;
                         fs.writeFileSync('./config.json', JSON.stringify(config, null, 2));
                     })
-                    .catch(sendError => { console.log("Error encountered while sending new reminder message:", sendError); });
+                    .catch(sendError => { log(true, "Error encountered while sending new reminder message:", sendError); });
                 })
-                .catch(deleteError => { console.log("Error encountered while deleting previous reminder message:", deleteError); });                  
+                .catch(deleteError => { log(true, "Error encountered while deleting previous reminder message:", deleteError); });                  
             })
             .catch(fetchError => {
                 if (fetchError.message == '404: Not Found') {
@@ -86,9 +90,9 @@ client.on("ready", () => {
                         config.reminder_message_id = message.id;
                         fs.writeFileSync('./config.json', JSON.stringify(config, null, 2));
                     })
-                    .catch(sendError => { console.log("Error encountered while sending new reminder message after not finding previous message:", sendError); });
+                    .catch(sendError => { log(true, "Error encountered while sending new reminder message after not finding previous message:", sendError); });
                 }
-                else { console.log("Error encountered while fetching previous reminder message:", fetchError); }
+                else { log(true, "Error encountered while fetching previous reminder message:", fetchError); }
             });    
         }
     }, reminderDelay, spritas.channels.get(completed_channel), spritas_youtube_reminder);
@@ -102,7 +106,7 @@ client.on("ready", () => {
     // join music channel and play music
     spritas.channels.get(music_channel).join().then(connection => playMusicStream(connection))
     .catch(joinError => {
-        console.log("Error encountered while trying to join music void channel:", joinError);
+        log(true, "Error encountered while trying to join music void channel:", joinError);
     });
 });
 
@@ -126,7 +130,7 @@ client.on("message", async (message) => {
         command.execute(message, args);
     }
     catch (error) {
-        console.error(error);
+        log(true, error);
         message.reply(`Sorry! A problem occurred trying to execute the ${commandName} command.`);
     }
 });
@@ -145,7 +149,7 @@ client.on('raw', event => {
                     let user = client.guilds.get(spritas_server).members.get(event.d.user_id);
                     client.emit('messageReactionAdd', reaction, user);
                 })
-                .catch(err => console.log(err));
+                .catch(err => log(true, err));
             }
         }
     } 
@@ -159,7 +163,7 @@ client.on('raw', event => {
                     let user = client.guilds.get(spritas_server).members.get(event.d.user_id);
                     client.emit('messageReactionRemove', reaction, user);
                 })
-                .catch(err => console.log(err));
+                .catch(err => log(true, err));
             }
         }
     }
@@ -169,24 +173,31 @@ client.on('messageReactionAdd', (messageReaction, user) => {
     let spritas = client.guilds.get(spritas_server);
     let emojiName = messageReaction.emoji.name;
     let member = spritas.members.get(user.id);
-    let role = null;
+    let roles = [];
     switch(emojiName) {
         case spritan_role_assign_emoji:
-            role = spritas.roles.get(spritan_role);           
+            roles.push(spritas.roles.get(spritan_role));           
+            break;
+        case announcements_role_assign_emoji:
+            roles.push(spritas.roles.get(spritan_role));
+            roles.push(spritas.roles.get(announcements_role));
             break;
         case collab_role_assign_emoji:
-            role = spritas.roles.get(collab_role);
+            roles.push(spritas.roles.get(spritan_role));
+            roles.push(spritas.roles.get(collab_role));
             break;
         case gamer_role_assign_emoji:
-            role = spritas.roles.get(gamer_role);
-            break;
-        case degen_role_assign_emoji:
-            role = spritas.roles.get(degen_role);
+            roles.push(spritas.roles.get(spritan_role));
+            roles.push(spritas.roles.get(gamer_role));
             break;
         default:
             break;
     }
-    if (role && member) member.addRole(role.id);
+    if (roles.length && member) {
+        roles.forEach(role => {
+            member.addRole(role.id); 
+        });
+    }
 });
 
 client.on('messageReactionRemove', (messageReaction, user) => {
@@ -195,17 +206,14 @@ client.on('messageReactionRemove', (messageReaction, user) => {
     let member = spritas.members.get(user.id);
     let role = null;
     switch(emojiName) {
-        case spritan_role_assign_emoji:
-            role = spritas.roles.get(spritan_role);           
+        case announcements_role_assign_emoji:
+            role = spritas.roles.get(announcements_role);
             break;
         case collab_role_assign_emoji:
             role = spritas.roles.get(collab_role);
             break;
         case gamer_role_assign_emoji:
             role = spritas.roles.get(gamer_role);
-            break;
-        case degen_role_assign_emoji:
-            role = spritas.roles.get(degen_role);
             break;
         default:
             break;
@@ -239,30 +247,40 @@ client.login(discord_token);
 
 function playMusicStream(voiceConnection) {
     let song = queue[queueIndex];
-    console.log("grabbed next song from queue:", song);
+    log(false, "grabbed next song from queue:", song);
 
     client.user.setPresence({ game: { name: song.title }});
-    console.log("presence set to:", song.title);
+    log(false, "presence set to:", song.title);
 
     ytdlDiscord(song.url).then(input => {
-        console.log("playing song");
+        log(false, "playing song");
         const pcm = input.pipe(new prism.opus.Decoder({ rate: 48000, channels: 2, frameSize: 960 }));
+
+        finished(pcm, (err) => {
+            log(false, "finished");
+            if (err) {
+                log(false, "Finished function detected error in stream")
+                log(true, err);
+                playNextSong(voiceConnection);
+            }
+        })
+
         let dispatcher = voiceConnection.playConvertedStream(pcm);
         dispatcher.setVolumeLogarithmic(0.25);
 
         dispatcher.on("end", (reason) => {
-            console.log("song ended")
+            log(false, "song ended")
             dispatcher = null;
             playNextSong(voiceConnection);
         })
         .on('error', (error) => {
-            console.log("dispatcher error, skipping song:", error);
+            log(false, "dispatcher error, skipping song:", error);
             dispatcher = null;
             playNextSong(voiceConnection)
         });
     })
     .catch(error => {
-        console.log("error encountered using input from ytdldiscord:", error);
+        log(false, "error encountered using input from ytdldiscord:", error);
 
         playNextSong(voiceConnection)
     });
@@ -283,4 +301,16 @@ function shuffle(a) {
         [a[i], a[j]] = [a[j], a[i]];
     }
     return a;
+}
+
+function log() {
+    let args = [...arguments];
+    let isError = args.shift();
+    let date = '[' + new Date().toISOString() + ']';
+    if (isError) {
+        console.error(date, ...args);
+    }
+    else {
+        console.log(date, ...args);
+    }
 }
