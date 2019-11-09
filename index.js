@@ -255,7 +255,7 @@ async function playMusicStream(voiceConnection) {
     client.user.setPresence({ game: { name: song.title }});
     log(false, "presence set to:", song.title);
 
-    const dispatcher = voiceConnection.playStream(ytdl(song.url));
+    const dispatcher = voiceConnection.playStream(ytdl(song.url, {filter: "audio"}));
     dispatcher.on("end", (reason) => {
         log(false, "song ended")
         dispatcher = null;
