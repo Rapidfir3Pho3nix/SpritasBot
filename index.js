@@ -245,28 +245,35 @@ client.on('messageReactionRemove', (messageReaction, user) => {
 
 client.login(discord_token);
 
-async function playMusicStream(voiceConnection) {
+function playMusicStream(voiceConnection) {
     let song = queue[queueIndex];
     log(false, "grabbed next song from queue:", song);
 
-    const songInfo = await ytdl.getInfo(song.url);
-    song.title = songInfo.title || song.title;
+    ytdl.getInfo(song.url, (err, songInfo) => {
+        if (err) {
+            log(false, "error while getting info from ytdl-core", err);
+            playNextSong(voiceConnection);
+        }
 
-    client.user.setPresence({ game: { name: song.title }});
-    log(false, "presence set to:", song.title);
+        song.title = songInfo.title || song.title;
 
-    const dispatcher = voiceConnection.playStream(ytdl(song.url, {filter: "audio"}));
-    dispatcher.on("end", (reason) => {
-        log(false, "song ended")
-        dispatcher = null;
-        playNextSong(voiceConnection);
-    })
-    .on('error', (error) => {
-        log(false, "dispatcher error, skipping song:", error);
-        dispatcher = null;
-        playNextSong(voiceConnection)
+        client.user.setPresence({ game: { name: song.title }});
+        log(false, "presence set to:", song.title);
+
+        const dispatcher = voiceConnection.playStream(ytdl(song.url, {filter: "audio"}));
+        dispatcher.on("end", (reason) => {
+            log(false, "song ended")
+            dispatcher = null;
+            playNextSong(voiceConnection);
+        })
+        .on('error', (error) => {
+            log(false, "dispatcher error, skipping song:", error);
+            dispatcher = null;
+            playNextSong(voiceConnection)
+        });
+        dispatcher.setVolumeLogarithmic(0.25);
     });
-    dispatcher.setVolumeLogarithmic(0.25);
+    
 
     // ytdlDiscord(song.url).then(input => {
     //     log(false, "playing song");
