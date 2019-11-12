@@ -9,7 +9,8 @@ const { prefix, discord_token, spritas_server, completed_channel, music_channel,
     spritan_role_assign_emoji, announcements_role_assign_emoji, collab_role_assign_emoji, gamer_role_assign_emoji, 
     spritan_role, announcements_role, collab_role, gamer_role 
 } = require("./config.json");
-const ytdl = require("ytdl-core");
+// const ytdl = require("ytdl-core");
+const ytdlDiscord = require("ytdl-core-discord");
 const prism = require('prism-media');
 
 const { finished } = require('stream');
@@ -97,17 +98,17 @@ client.on("ready", () => {
         }
     }, reminderDelay, spritas.channels.get(completed_channel), spritas_youtube_reminder);
 
-    // read playlist into queue and shuffle the queue
-    fs.createReadStream('./playlist.csv').pipe(csv()).on('data', (row) => {
-        queue.push({ url: row["Video URL"], title: row["Title"] });
-    })
-    .on('end', () => { shuffle(queue); });
+    // // read playlist into queue and shuffle the queue
+    // fs.createReadStream('./playlist.csv').pipe(csv()).on('data', (row) => {
+    //     queue.push({ url: row["Video URL"], title: row["Title"] });
+    // })
+    // .on('end', () => { shuffle(queue); });
 
-    // join music channel and play music
-    spritas.channels.get(music_channel).join().then(connection => playMusicStream(connection))
-    .catch(joinError => {
-        log(true, "Error encountered while trying to join music void channel:", joinError);
-    });
+    // // join music channel and play music
+    // spritas.channels.get(music_channel).join().then(connection => playMusicStream(connection))
+    // .catch(joinError => {
+    //     log(true, "Error encountered while trying to join music void channel:", joinError);
+    // });
 });
 
 client.on("message", async (message) => {
@@ -249,48 +250,32 @@ function playMusicStream(voiceConnection) {
     let song = queue[queueIndex];
     log(false, "grabbed next song from queue:", song);
 
-    ytdl.getInfo(song.url, (err, songInfo) => {
-        if (err) {
-            log(false, "error while getting info from ytdl-core", err);
-            playNextSong(voiceConnection);
-        }
+    // let audiostream = null;
+    // ytdl.getInfo(song.url, (err, songInfo) => {
+    //     if (err) {
+    //         log(false, "error while getting info from ytdl-core", err);
+    //         playNextSong(voiceConnection);
+    //     }
 
-        song.title = songInfo.title || song.title;
+    //     song.title = songInfo.title || song.title;
 
-        client.user.setPresence({ game: { name: song.title }});
-        log(false, "presence set to:", song.title);
+    //     client.user.setPresence({ game: { name: song.title }});
+    //     log(false, "presence set to:", song.title);
 
-        const dispatcher = voiceConnection.playStream(ytdl(song.url, {filter: "audio"}));
-        dispatcher.on("end", (reason) => {
-            log(false, "song ended")
-            dispatcher = null;
-            playNextSong(voiceConnection);
-        })
-        .on('error', (error) => {
-            log(false, "dispatcher error, skipping song:", error);
-            dispatcher = null;
-            playNextSong(voiceConnection)
-        });
-        dispatcher.setVolumeLogarithmic(0.25);
-    });
-    
+    //     audioStream = ytdl(song.url, {filter: "audio"});
+    // });
 
-    // ytdlDiscord(song.url).then(input => {
-    //     log(false, "playing song");
-    //     const pcm = input.pipe(new prism.opus.Decoder({ rate: 48000, channels: 2, frameSize: 960 }));
-
-    //     finished(pcm, (err) => {
+    // if (audiostream) {
+    //     finished(audioStream, (err) => {
     //         log(false, "finished");
     //         if (err) {
     //             log(false, "Finished function detected error in stream")
     //             log(true, err);
     //             playNextSong(voiceConnection);
     //         }
-    //     })
+    //     });
 
-    //     let dispatcher = voiceConnection.playConvertedStream(pcm);
-    //     dispatcher.setVolumeLogarithmic(0.25);
-
+    //     const dispatcher = voiceConnection.playStream(audioStream);
     //     dispatcher.on("end", (reason) => {
     //         log(false, "song ended")
     //         dispatcher = null;
@@ -301,12 +286,44 @@ function playMusicStream(voiceConnection) {
     //         dispatcher = null;
     //         playNextSong(voiceConnection)
     //     });
-    // })
-    // .catch(error => {
-    //     log(false, "error encountered using input from ytdldiscord:", error);
+    //     dispatcher.setVolumeLogarithmic(0.25);
+    // }
 
-    //     playNextSong(voiceConnection)
-    // });
+    client.user.setPresence({ game: { name: song.title }});
+    log(false, "presence set to:", song.title);
+
+    ytdlDiscord(song.url).then(input => {
+        log(false, "playing song");
+        const pcm = input.pipe(new prism.opus.Decoder({ rate: 48000, channels: 2, frameSize: 960 }));
+
+        finished(pcm, (err) => {
+            log(false, "finished");
+            if (err) {
+                log(false, "Finished function detected error in stream")
+                log(true, err);
+                playNextSong(voiceConnection);
+            }
+        })
+
+        let dispatcher = voiceConnection.playConvertedStream(pcm);
+        dispatcher.setVolumeLogarithmic(0.25);
+
+        dispatcher.on("end", (reason) => {
+            log(false, "song ended")
+            dispatcher = null;
+            playNextSong(voiceConnection);
+        })
+        .on('error', (error) => {
+            log(false, "dispatcher error, skipping song:", error);
+            dispatcher = null;
+            playNextSong(voiceConnection)
+        });
+    })
+    .catch(error => {
+        log(false, "error encountered using input from ytdldiscord:", error);
+
+        playNextSong(voiceConnection)
+    });
 }
 
 function playNextSong(voiceConnection) {
