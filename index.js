@@ -1,19 +1,24 @@
 /**
  * Created by Rapidfir3Pho3nix on 4/16/2017.
  */
+const { prefix, discord_token, spritas_server, completed_channel, music_channel, spritas_youtube_reminder, role_assignment_message_id, role_assignment_message, role_assignment_channel, 
+    spritan_role_assign_emoji, announcements_role_assign_emoji, collab_role_assign_emoji, gamer_role_assign_emoji, 
+    spritan_role, announcements_role, collab_role, gamer_role, staff_channel
+} = require("./config.json");
 
 const fs = require("fs");
 const csv = require("csv-parser");
 const Discord = require("discord.js");
-const { prefix, discord_token, spritas_server, completed_channel, music_channel, spritas_youtube_reminder, role_assignment_message_id, role_assignment_message, role_assignment_channel, 
-    spritan_role_assign_emoji, announcements_role_assign_emoji, collab_role_assign_emoji, gamer_role_assign_emoji, 
-    spritan_role, announcements_role, collab_role, gamer_role 
-} = require("./config.json");
+
 // const ytdl = require("ytdl-core");
 const ytdlDiscord = require("ytdl-core-discord");
 const prism = require('prism-media');
+const moment = require('moment');
 
 const { finished } = require('stream');
+
+const SQLite = require("better-sqlite3");
+const sql = new SQLite('./spritas-discord.sqlite');
 
 const client = new Discord.Client();
 client.commands = new Discord.Collection();
@@ -37,8 +42,24 @@ for (const file of commandFiles) {
 // set up functionality when bot is ready
 client.on("ready", () => {
     log(false, "Bot is ready!");
+
+    // Check if the table "points" exists.
+    const table = sql.prepare("SELECT count(*) FROM sqlite_master WHERE type='table' AND name = 'points';").get();
+    if (!table['count(*)']) {
+        // If the table isn't there, create it and setup the database correctly.
+        sql.prepare("CREATE TABLE points (id TEXT PRIMARY KEY, user TEXT, guild TEXT, points INTEGER, level INTEGER);").run();
+        // Ensure that the "id" row is always unique and indexed.
+        sql.prepare("CREATE UNIQUE INDEX idx_points_id ON points (id);").run();
+        sql.pragma("synchronous = 1");
+        sql.pragma("journal_mode = wal");
+    }
+
+    // And then we have two prepared statements to get and set the score data.
+    client.getScore = sql.prepare("SELECT * FROM points WHERE user = ? AND guild = ?");
+    client.setScore = sql.prepare("INSERT OR REPLACE INTO points (id, user, guild, points, level) VALUES (@id, @user, @guild, @points, @level);");
+
     const spritas = client.guilds.get(spritas_server);
-    const reminderDelay = 2 * 60 * 60 * 1000;
+    const reminderDelay = 8 * 60 * 60 * 1000;
 
     // set up role reaction if necessary
     if (!role_assignment_message_id) {
@@ -109,11 +130,59 @@ client.on("ready", () => {
     // .catch(joinError => {
     //     log(true, "Error encountered while trying to join music void channel:", joinError);
     // });
+
+    // create aotm message 
+    let aotmMessageDelay = 12 * 60 * 60 * 1000;
+    client.setInterval(function findAOTMEntries() {
+        let config = JSON.parse(fs.readFileSync('./config.json'));
+        let currentTime = moment();
+
+        const completedChan = spritas.channels.get(completed_channel);
+        const staffChan = spritas.channels.get(staff_channel);
+        const startOfLastMonth = moment().subtract(1,'months').startOf('month');
+        const endOfLastMonth = moment().subtract(1,'months').endOf('month');
+
+        log(false, "start of last month:", startOfLastMonth);
+        log(false, "start of last month:", endOfLastMonth);
+
+        let entries = [];
+        const filter = m => m.content.includes('youtube');
+        const collector = staffChan.createMessageCollector(filter);
+        collector.on('collect', m => {
+            console.log(`Collected ${m.content}`)
+        });
+        collector.on('end', collected => {
+            console.log(`Collected ${collected.size} items`);
+        });
+      
+        if (currentTime.month() == config.aotm_month) return findAOTMEntries;
+
+        staffChan.send("test message plz ignore").then(message => {
+            config.aotm_month = currentTime.month();
+            fs.writeFileSync('./config.json', JSON.stringify(config, null, 2));
+        });
+        return findAOTMEntries;
+    }(), aotmMessageDelay);
 });
 
 client.on("message", async (message) => {
-    //ignore message if it doesn't begin with prefix or if message is from bot
-    if(!message.content.startsWith(prefix) || message.author.bot) return;
+    //ignore message if message is from bot
+    if(message.author.bot) return;
+
+    if (message.guild) {
+        let score = client.getScore.get(message.author.id, message.guild.id);
+        if (!score) score = { id: `${message.guild.id}-${message.author.id}`, user: message.author.id, guild: message.guild.id, points: 0, level: 1 };
+        score.points++;
+        const curLevel = Math.floor(0.1 * Math.sqrt(score.points));
+        if(score.level < curLevel) {
+            score.level++;
+            //message.reply(`You've leveled up to level **${curLevel}**! Ain't that dandy?`);
+        }
+        client.setScore.run(score);
+    }
+
+    // ignore message if it doesn't begin with prefix
+    if (!message.content.startsWith(prefix)) return;
 
     //get command and arguemnts
     const args = message.content.slice(prefix.length).split(/ +/g);
@@ -247,83 +316,86 @@ client.on('messageReactionRemove', (messageReaction, user) => {
 client.login(discord_token);
 
 function playMusicStream(voiceConnection) {
-    let song = queue[queueIndex];
-    log(false, "grabbed next song from queue:", song);
+    let songDelay = 5000;
+    client.setTimeout(function(voiceConnection) {
+        let song = queue[queueIndex];
+        log(false, "grabbed next song from queue:", song);
 
-    // let audiostream = null;
-    // ytdl.getInfo(song.url, (err, songInfo) => {
-    //     if (err) {
-    //         log(false, "error while getting info from ytdl-core", err);
-    //         playNextSong(voiceConnection);
-    //     }
+        // let audiostream = null;
+        // ytdl.getInfo(song.url, (err, songInfo) => {
+        //     if (err) {
+        //         log(false, "error while getting info from ytdl-core", err);
+        //         playNextSong(voiceConnection);
+        //     }
 
-    //     song.title = songInfo.title || song.title;
+        //     song.title = songInfo.title || song.title;
 
-    //     client.user.setPresence({ game: { name: song.title }});
-    //     log(false, "presence set to:", song.title);
+        //     client.user.setPresence({ game: { name: song.title }});
+        //     log(false, "presence set to:", song.title);
 
-    //     audioStream = ytdl(song.url, {filter: "audio"});
-    // });
+        //     audioStream = ytdl(song.url, {filter: "audio"});
+        // });
 
-    // if (audiostream) {
-    //     finished(audioStream, (err) => {
-    //         log(false, "finished");
-    //         if (err) {
-    //             log(false, "Finished function detected error in stream")
-    //             log(true, err);
-    //             playNextSong(voiceConnection);
-    //         }
-    //     });
+        // if (audiostream) {
+        //     finished(audioStream, (err) => {
+        //         log(false, "finished");
+        //         if (err) {
+        //             log(false, "Finished function detected error in stream")
+        //             log(true, err);
+        //             playNextSong(voiceConnection);
+        //         }
+        //     });
 
-    //     const dispatcher = voiceConnection.playStream(audioStream);
-    //     dispatcher.on("end", (reason) => {
-    //         log(false, "song ended")
-    //         dispatcher = null;
-    //         playNextSong(voiceConnection);
-    //     })
-    //     .on('error', (error) => {
-    //         log(false, "dispatcher error, skipping song:", error);
-    //         dispatcher = null;
-    //         playNextSong(voiceConnection)
-    //     });
-    //     dispatcher.setVolumeLogarithmic(0.25);
-    // }
+        //     const dispatcher = voiceConnection.playStream(audioStream);
+        //     dispatcher.on("end", (reason) => {
+        //         log(false, "song ended")
+        //         dispatcher = null;
+        //         playNextSong(voiceConnection);
+        //     })
+        //     .on('error', (error) => {
+        //         log(false, "dispatcher error, skipping song:", error);
+        //         dispatcher = null;
+        //         playNextSong(voiceConnection)
+        //     });
+        //     dispatcher.setVolumeLogarithmic(0.25);
+        // }
 
-    client.user.setPresence({ game: { name: song.title }});
-    log(false, "presence set to:", song.title);
+        client.user.setPresence({ game: { name: song.title }});
+        log(false, "presence set to:", song.title);
 
-    ytdlDiscord(song.url).then(input => {
-        log(false, "playing song");
-        const pcm = input.pipe(new prism.opus.Decoder({ rate: 48000, channels: 2, frameSize: 960 }));
+        ytdlDiscord(song.url).then(input => {
+            log(false, "playing song");
+            const pcm = input.pipe(new prism.opus.Decoder({ rate: 48000, channels: 2, frameSize: 960 }));
 
-        finished(pcm, (err) => {
-            log(false, "finished");
-            if (err) {
-                log(false, "Finished function detected error in stream")
-                log(true, err);
+            finished(pcm, (err) => {
+                log(false, "finished");
+                if (err) {
+                    log(false, "Finished function detected error in stream")
+                    log(true, err);
+                    playNextSong(voiceConnection);
+                }
+            })
+
+            let dispatcher = voiceConnection.playConvertedStream(pcm);
+            dispatcher.setVolumeLogarithmic(0.25);
+
+            dispatcher.on("end", (reason) => {
+                log(false, "song ended")
+                dispatcher = null;
                 playNextSong(voiceConnection);
-            }
+            })
+            .on('error', (error) => {
+                log(false, "dispatcher error, skipping song:", error);
+                dispatcher = null;
+                playNextSong(voiceConnection)
+            });
         })
+        .catch(error => {
+            log(false, "error encountered using input from ytdldiscord:", error);
 
-        let dispatcher = voiceConnection.playConvertedStream(pcm);
-        dispatcher.setVolumeLogarithmic(0.25);
-
-        dispatcher.on("end", (reason) => {
-            log(false, "song ended")
-            dispatcher = null;
-            playNextSong(voiceConnection);
-        })
-        .on('error', (error) => {
-            log(false, "dispatcher error, skipping song:", error);
-            dispatcher = null;
             playNextSong(voiceConnection)
         });
-    })
-    .catch(error => {
-        log(false, "error encountered using input from ytdldiscord:", error);
-
-        playNextSong(voiceConnection)
-    });
+    }, songDelay, voiceConnection);   
 }
 
 function playNextSong(voiceConnection) {
