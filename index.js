@@ -119,17 +119,17 @@ client.on("ready", () => {
         }
     }, reminderDelay, spritas.channels.get(completed_channel), spritas_youtube_reminder);
 
-    // // read playlist into queue and shuffle the queue
-    // fs.createReadStream('./playlist.csv').pipe(csv()).on('data', (row) => {
-    //     queue.push({ url: row["Video URL"], title: row["Title"] });
-    // })
-    // .on('end', () => { shuffle(queue); });
+    // read playlist into queue and shuffle the queue
+    fs.createReadStream('./playlist.csv').pipe(csv()).on('data', (row) => {
+        queue.push({ url: row["Video URL"], title: row["Title"] });
+    })
+    .on('end', () => { shuffle(queue); });
 
-    // // join music channel and play music
-    // spritas.channels.get(music_channel).join().then(connection => playMusicStream(connection))
-    // .catch(joinError => {
-    //     log(true, "Error encountered while trying to join music void channel:", joinError);
-    // });
+    // join music channel and play music
+    spritas.channels.get(music_channel).join().then(connection => playMusicStream(connection))
+    .catch(joinError => {
+        log(true, "Error encountered while trying to join music void channel:", joinError);
+    });
 
     // create aotm message 
     let aotmMessageDelay = 12 * 60 * 60 * 1000;
