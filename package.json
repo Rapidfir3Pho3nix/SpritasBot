@@ -20,6 +20,7 @@
     "@discordjs/uws": "^11.149.1",
     "better-sqlite-pool": "^0.2.2",
     "better-sqlite3": "^5.4.3",
+    "bufferutil": "^4.0.1",
     "csv-parser": "^2.3.0",
     "discord.js": "^11.5.1",
     "enmap": "^5.0.0",
@@ -33,6 +34,6 @@
     "prism-media": "^1.0.1",
     "sodium": "^3.0.2",
     "ytdl-core": "^0.29.3",
-    "ytdl-core-discord": "^1.0.3"
+    "ytdl-core-discord": "git+https://github.com/amishshah/ytdl-core-discord.git"
   }
 }
