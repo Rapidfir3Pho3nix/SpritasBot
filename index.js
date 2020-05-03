@@ -41,8 +41,6 @@ for (const file of commandFiles) {
 
 // set up functionality when bot is ready
 client.on("ready", () => {
-    log(false, "Bot is ready!");
-
     // Check if the table "points" exists.
     const table = sql.prepare("SELECT count(*) FROM sqlite_master WHERE type='table' AND name = 'points';").get();
     if (!table['count(*)']) {
@@ -58,16 +56,16 @@ client.on("ready", () => {
     client.getScore = sql.prepare("SELECT * FROM points WHERE user = ? AND guild = ?");
     client.setScore = sql.prepare("INSERT OR REPLACE INTO points (id, user, guild, points, level) VALUES (@id, @user, @guild, @points, @level);");
 
-    const spritas = client.guilds.get(spritas_server);
+    const spritas = client.guilds.cache.get(spritas_server);
     const reminderDelay = 8 * 60 * 60 * 1000;
 
     // set up role reaction if necessary
     if (!role_assignment_message_id) {
-        const roleChan = spritas.channels.get(role_assignment_channel);
-        const spritanEmoji = spritas.emojis.find(emoji => emoji.name === spritan_role_assign_emoji);
-        const collabEmoji = spritas.emojis.find(emoji => emoji.name === collab_role_assign_emoji);
-        const gamerEmoji = spritas.emojis.find(emoji => emoji.name === gamer_role_assign_emoji);
-        const announceEmoji = spritas.emojis.find(emoji => emoji.name === announcements_role_assign_emoji);
+        const roleChan = spritas.channels.cache.get(role_assignment_channel);
+        const spritanEmoji = spritas.emojis.cache.find(emoji => emoji.name === spritan_role_assign_emoji);
+        const collabEmoji = spritas.emojis.cache.find(emoji => emoji.name === collab_role_assign_emoji);
+        const gamerEmoji = spritas.emojis.cache.find(emoji => emoji.name === gamer_role_assign_emoji);
+        const announceEmoji = spritas.emojis.cache.find(emoji => emoji.name === announcements_role_assign_emoji);
         const roleEmbed = new Discord.RichEmbed()
             .setColor('#0099ff')
             .setTitle('Role Assignment')
@@ -117,52 +115,9 @@ client.on("ready", () => {
                 else { log(true, "Error encountered while fetching previous reminder message:", fetchError); }
             });    
         }
-    }, reminderDelay, spritas.channels.get(completed_channel), spritas_youtube_reminder);
+    }, reminderDelay, spritas.channels.cache.get(completed_channel), spritas_youtube_reminder);
 
-    // // read playlist into queue and shuffle the queue
-    // fs.createReadStream('./playlist.csv').pipe(csv()).on('data', (row) => {
-    //     queue.push({ url: row["Video URL"], title: row["Title"] });
-    // })
-    // .on('end', () => { shuffle(queue); });
-
-    // // join music channel and play music
-    // spritas.channels.get(music_channel).join().then(connection => playMusicStream(connection))
-    // .catch(joinError => {
-    //     log(true, "Error encountered while trying to join music void channel:", joinError);
-    // });
-
-    // create aotm message 
-    let aotmMessageDelay = 12 * 60 * 60 * 1000;
-    client.setInterval(function findAOTMEntries() {
-        let config = JSON.parse(fs.readFileSync('./config.json'));
-        let currentTime = moment();
-
-        const completedChan = spritas.channels.get(completed_channel);
-        const staffChan = spritas.channels.get(staff_channel);
-        const startOfLastMonth = moment().subtract(1,'months').startOf('month');
-        const endOfLastMonth = moment().subtract(1,'months').endOf('month');
-
-        log(false, "start of last month:", startOfLastMonth);
-        log(false, "start of last month:", endOfLastMonth);
-
-        let entries = [];
-        const filter = m => m.content.includes('youtube');
-        const collector = staffChan.createMessageCollector(filter);
-        collector.on('collect', m => {
-            console.log(`Collected ${m.content}`)
-        });
-        collector.on('end', collected => {
-            console.log(`Collected ${collected.size} items`);
-        });
-      
-        if (currentTime.month() == config.aotm_month) return findAOTMEntries;
-
-        staffChan.send("test message plz ignore").then(message => {
-            config.aotm_month = currentTime.month();
-            fs.writeFileSync('./config.json', JSON.stringify(config, null, 2));
-        });
-        return findAOTMEntries;
-    }(), aotmMessageDelay);
+    log(false, "Bot is ready!");
 });
 
 client.on("message", async (message) => {
@@ -211,12 +166,12 @@ client.on('raw', event => {
     const eventName = event.t;
     if (eventName === 'MESSAGE_REACTION_ADD') {
         if (event.d.message_id == config.role_assignment_message_id) {
-            let roleChan = client.guilds.get(spritas_server).channels.get(event.d.channel_id);
+            let roleChan = client.guilds.cache.get(spritas_server).channels.cache.get(event.d.channel_id);
             if (roleChan.messages.has(event.d.message_id)) return;
             else {
                 roleChan.fetchMessage(event.d.message_id).then(message => {
-                    let reaction = message.reactions.get(event.d.emoji.name + ":" + event.d.emoji.id);
-                    let user = client.guilds.get(spritas_server).members.get(event.d.user_id);
+                    let reaction = message.reactions.cache.get(event.d.emoji.name + ":" + event.d.emoji.id);
+                    let user = client.guilds.cache.get(spritas_server).members.cache.get(event.d.user_id);
                     client.emit('messageReactionAdd', reaction, user);
                 })
                 .catch(err => log(true, err));
@@ -225,12 +180,12 @@ client.on('raw', event => {
     } 
     else if (eventName === 'MESSAGE_REACTION_REMOVE') {
         if (event.d.message_id == config.role_assignment_message_id) {
-            let roleChan = client.guilds.get(spritas_server).channels.get(event.d.channel_id);
+            let roleChan = client.guilds.cache.get(spritas_server).channels.cache.get(event.d.channel_id);
             if (roleChan.messages.has(event.d.message_id)) return;
             else {
                 roleChan.fetchMessage(event.d.message_id).then(message => {
-                    let reaction = message.reactions.get(event.d.emoji.name + ":" + event.d.emoji.id);
-                    let user = client.guilds.get(spritas_server).members.get(event.d.user_id);
+                    let reaction = message.reactions.cache.get(event.d.emoji.name + ":" + event.d.emoji.id);
+                    let user = client.guilds.cache.get(spritas_server).members.cache.get(event.d.user_id);
                     client.emit('messageReactionRemove', reaction, user);
                 })
                 .catch(err => log(true, err));
@@ -240,25 +195,25 @@ client.on('raw', event => {
 });
 
 client.on('messageReactionAdd', (messageReaction, user) => {
-    let spritas = client.guilds.get(spritas_server);
+    let spritas = client.guilds.cache.get(spritas_server);
     let emojiName = messageReaction.emoji.name;
-    let member = spritas.members.get(user.id);
+    let member = spritas.members.cache.get(user.id);
     let roles = [];
     switch(emojiName) {
         case spritan_role_assign_emoji:
-            roles.push(spritas.roles.get(spritan_role));           
+            roles.push(spritas.roles.cache.get(spritan_role));           
             break;
         case announcements_role_assign_emoji:
-            roles.push(spritas.roles.get(spritan_role));
-            roles.push(spritas.roles.get(announcements_role));
+            roles.push(spritas.roles.cache.get(spritan_role));
+            roles.push(spritas.roles.cache.get(announcements_role));
             break;
         case collab_role_assign_emoji:
-            roles.push(spritas.roles.get(spritan_role));
-            roles.push(spritas.roles.get(collab_role));
+            roles.push(spritas.roles.cache.get(spritan_role));
+            roles.push(spritas.roles.cache.get(collab_role));
             break;
         case gamer_role_assign_emoji:
-            roles.push(spritas.roles.get(spritan_role));
-            roles.push(spritas.roles.get(gamer_role));
+            roles.push(spritas.roles.cache.get(spritan_role));
+            roles.push(spritas.roles.cache.get(gamer_role));
             break;
         default:
             break;
@@ -271,19 +226,19 @@ client.on('messageReactionAdd', (messageReaction, user) => {
 });
 
 client.on('messageReactionRemove', (messageReaction, user) => {
-    let spritas = client.guilds.get(spritas_server);
+    let spritas = client.guilds.cache.get(spritas_server);
     let emojiName = messageReaction.emoji.name;
-    let member = spritas.members.get(user.id);
+    let member = spritas.members.cache.get(user.id);
     let role = null;
     switch(emojiName) {
         case announcements_role_assign_emoji:
-            role = spritas.roles.get(announcements_role);
+            role = spritas.roles.cache.get(announcements_role);
             break;
         case collab_role_assign_emoji:
-            role = spritas.roles.get(collab_role);
+            role = spritas.roles.cache.get(collab_role);
             break;
         case gamer_role_assign_emoji:
-            role = spritas.roles.get(gamer_role);
+            role = spritas.roles.cache.get(gamer_role);
             break;
         default:
             break;
