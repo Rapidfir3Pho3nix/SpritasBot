@@ -1,36 +1,19 @@
 /**
  * Created by Rapidfir3Pho3nix on 4/16/2017.
  */
-const { prefix, discord_token, spritas_server, completed_channel, music_channel, spritas_youtube_reminder, role_assignment_message_id, role_assignment_message, role_assignment_channel, 
+const { prefix, discord_token, spritas_server, completed_channel, spritas_youtube_reminder, role_assignment_message_id, role_assignment_message, role_assignment_channel, 
     spritan_role_assign_emoji, announcements_role_assign_emoji, collab_role_assign_emoji, gamer_role_assign_emoji, 
-    spritan_role, announcements_role, collab_role, gamer_role, staff_channel
+    spritan_role, announcements_role, collab_role, gamer_role, welcome_channel, rules_channel
 } = require("./config.json");
 
 const fs = require("fs");
-const csv = require("csv-parser");
 const Discord = require("discord.js");
-
-// const ytdl = require("ytdl-core");
-const ytdlDiscord = require("ytdl-core-discord");
-const prism = require('prism-media');
-const moment = require('moment');
-
-const { finished } = require('stream');
 
 const SQLite = require("better-sqlite3");
 const sql = new SQLite('./spritas-discord.sqlite');
 
 const client = new Discord.Client();
 client.commands = new Discord.Collection();
-
-// song queue
-queue = [];
-
-// current song index
-queueIndex = 0;
-
-// continue playing music
-playMusic = true;
 
 // read commands from files in command directory
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
@@ -91,7 +74,7 @@ client.on("ready", () => {
 
         // if current latest message ID does not match the ID for the last reminder message, delete the last reminder message, resend a new reminder message, and store new reminder message ID in config file
         if (completedChan.lastMessageID != pastMessageID) {
-            completedChan.fetchMessage(pastMessageID).then(pastMessage => {
+            completedChan.messages.fetch(pastMessageID).then(pastMessage => {
                 log(false, "grabbed previous message:", pastMessageID);
                 pastMessage.delete().then(msg => {
                     log(false, "previous message deleted:", msg);
@@ -167,10 +150,10 @@ client.on('raw', event => {
     if (eventName === 'MESSAGE_REACTION_ADD') {
         if (event.d.message_id == config.role_assignment_message_id) {
             let roleChan = client.guilds.cache.get(spritas_server).channels.cache.get(event.d.channel_id);
-            if (roleChan.messages.has(event.d.message_id)) return;
+            if (roleChan.messages.cache.has(event.d.message_id)) return;
             else {
-                roleChan.fetchMessage(event.d.message_id).then(message => {
-                    let reaction = message.reactions.cache.get(event.d.emoji.name + ":" + event.d.emoji.id);
+                roleChan.messages.fetch(event.d.message_id).then(message => {
+                    let reaction = event.d;
                     let user = client.guilds.cache.get(spritas_server).members.cache.get(event.d.user_id);
                     client.emit('messageReactionAdd', reaction, user);
                 })
@@ -181,10 +164,10 @@ client.on('raw', event => {
     else if (eventName === 'MESSAGE_REACTION_REMOVE') {
         if (event.d.message_id == config.role_assignment_message_id) {
             let roleChan = client.guilds.cache.get(spritas_server).channels.cache.get(event.d.channel_id);
-            if (roleChan.messages.has(event.d.message_id)) return;
+            if (roleChan.messages.cache.has(event.d.message_id)) return;
             else {
-                roleChan.fetchMessage(event.d.message_id).then(message => {
-                    let reaction = message.reactions.cache.get(event.d.emoji.name + ":" + event.d.emoji.id);
+                roleChan.messages.fetch(event.d.message_id).then(message => {
+                    let reaction = event.d;
                     let user = client.guilds.cache.get(spritas_server).members.cache.get(event.d.user_id);
                     client.emit('messageReactionRemove', reaction, user);
                 })
@@ -220,7 +203,7 @@ client.on('messageReactionAdd', (messageReaction, user) => {
     }
     if (roles.length && member) {
         roles.forEach(role => {
-            member.addRole(role.id); 
+            member.roles.add(role.id); 
         });
     }
 });
@@ -243,132 +226,33 @@ client.on('messageReactionRemove', (messageReaction, user) => {
         default:
             break;
     }
-    if (role && member) member.removeRole(role.id);
+    if (role && member) member.roles.remove(role.id);
 });
 
-// client.on("guildMemberAdd", async (member) => {
-//     member.createDM().then((dmChannel) => {
-//         dmChannel.send("Welcome to The Spritas Discord Server!"
-//         + "\n\nWe are the official Discord server of The Spritas: <https://www.thespritas.net/>"
-//         + "\n\n```Hi, I'm SpritasBot, nice to meetcha! Right now you may only post to the General channel. In order to post to the other channels you must send me a message that says \"!SPRITAS\" (don't include the quotes). Doing so will make you an honorary Spritan and give you access to the other channels! This also means we will assume you have read the rules for this Discord server, which can be found below. Happy Posting! :)```"
-//         + "\n\n**SERVER RULES:**"
-//         + "\n• Use common sense and have respect for others. We do not tolerate bullying or discrimination."
-//         + "\n• Listen to the moderators and the admins. If you are asked to do something by a member of one of these groups, then do it."
-//         + "\n• Try to discuss topics in their appropriate channels; e.g. talk about video games goes in #gaming."
-//         + "\n• If you have an issue with another member try to alert an online moderator or admin."
-//         + "\n• Don't spam. Don't spam in the same and/or different channels to get attention."
-//         + "\n• Links to any illegal downloads or copyrighted material as well as discussion about illegal downloads and copyrighted material is not allowed."
-//         + "\n• NSFW material may be posted in the #mature channel, however, **Pornographic material is strictly prohibited.**"
-//         + "\n• The same rules from the forums apply here as well. Make sure you have read them as well: <https://www.thespritas.net/t7226-basic-forum-rules>"
-//         + "\n\n**VOICE CHANNEL RULES:**"
-//         + "\n• Be mindful of your audio quality. If you have a lot of background noise/bad mic quality, then use the push-to-talk feature to engage in voice chat. You will be muted for substantially bad audio quality."
-//         + "\n• Use your inside voice and try to keep loud, disruptive noises to a minimum. Things can be exciting at times but remember that people are there to talk to each other."
-//         + "\n\nPlease enjoy your stay!");
-//     })
-//     .catch(console.error);
-// });
+client.on('guildMemberAdd', member => {
+    // Send the message to a designated channel on a server:
+    const channel = member.guild.channels.cache.get(welcome_channel);
+    const rules = member.guild.channels.cache.get(rules_channel);
+
+    // Do nothing if the channel wasn't found on this server
+    if (!channel) return;
+
+    // create embed welcome message
+    const welcomeEmbed = new Discord.MessageEmbed()
+        .setColor('#539ceb')
+        .setTitle("The Spritas is a creative art community that is focused primarily on sprites and sprite animation; however, all forms of art are accepted here so don't hesitate to share any work not related to sprites or sprite animation.")
+        .setAuthor(`${member.user.username}, welcome to The Spritas Discord server!`, "https://i.imgur.com/x0yysaP.png")
+        .setDescription(`Be sure to read the ${rules} to learn how to access the rest of the server!`)
+        .setThumbnail("https://i.imgur.com/hojIdon.png")
+        .setImage("https://i.imgur.com/A7zZxK4.png")
+        .setFooter(`The Spritas—${member.guild.memberCount}`);
+
+    channel.send(welcomeEmbed)
+        .then(message => log(false, `Sent message: ${message.content}`))
+        .catch(console.error);
+});
 
 client.login(discord_token);
-
-function playMusicStream(voiceConnection) {
-    let songDelay = 5000;
-    client.setTimeout(function(voiceConnection) {
-        let song = queue[queueIndex];
-        log(false, "grabbed next song from queue:", song);
-
-        // let audiostream = null;
-        // ytdl.getInfo(song.url, (err, songInfo) => {
-        //     if (err) {
-        //         log(false, "error while getting info from ytdl-core", err);
-        //         playNextSong(voiceConnection);
-        //     }
-
-        //     song.title = songInfo.title || song.title;
-
-        //     client.user.setPresence({ game: { name: song.title }});
-        //     log(false, "presence set to:", song.title);
-
-        //     audioStream = ytdl(song.url, {filter: "audio"});
-        // });
-
-        // if (audiostream) {
-        //     finished(audioStream, (err) => {
-        //         log(false, "finished");
-        //         if (err) {
-        //             log(false, "Finished function detected error in stream")
-        //             log(true, err);
-        //             playNextSong(voiceConnection);
-        //         }
-        //     });
-
-        //     const dispatcher = voiceConnection.playStream(audioStream);
-        //     dispatcher.on("end", (reason) => {
-        //         log(false, "song ended")
-        //         dispatcher = null;
-        //         playNextSong(voiceConnection);
-        //     })
-        //     .on('error', (error) => {
-        //         log(false, "dispatcher error, skipping song:", error);
-        //         dispatcher = null;
-        //         playNextSong(voiceConnection)
-        //     });
-        //     dispatcher.setVolumeLogarithmic(0.25);
-        // }
-
-        client.user.setPresence({ game: { name: song.title }});
-        log(false, "presence set to:", song.title);
-
-        ytdlDiscord(song.url).then(input => {
-            log(false, "playing song");
-            const pcm = input.pipe(new prism.opus.Decoder({ rate: 48000, channels: 2, frameSize: 960 }));
-
-            finished(pcm, (err) => {
-                log(false, "finished");
-                if (err) {
-                    log(false, "Finished function detected error in stream")
-                    log(true, err);
-                    playNextSong(voiceConnection);
-                }
-            })
-
-            let dispatcher = voiceConnection.playConvertedStream(pcm);
-            dispatcher.setVolumeLogarithmic(0.25);
-
-            dispatcher.on("end", (reason) => {
-                log(false, "song ended")
-                dispatcher = null;
-                playNextSong(voiceConnection);
-            })
-            .on('error', (error) => {
-                log(false, "dispatcher error, skipping song:", error);
-                dispatcher = null;
-                playNextSong(voiceConnection)
-            });
-        })
-        .catch(error => {
-            log(false, "error encountered using input from ytdldiscord:", error);
-
-            playNextSong(voiceConnection)
-        });
-    }, songDelay, voiceConnection);   
-}
-
-function playNextSong(voiceConnection) {
-    queueIndex = (queueIndex + 1) % queue.length;
-    if (queueIndex == 0) shuffle(queue);
-    if (playMusic) playMusicStream(voiceConnection);
-    else {
-        voiceConnection.channel.leave();
-    }
-}
-
-function shuffle(a) {
-    for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a;
-}
 
 function log() {
     let args = [...arguments];
