@@ -18,22 +18,12 @@
   "homepage": "https://github.com/Rapidfir3Pho3nix/SpritasBot#readme",
   "dependencies": {
     "@discordjs/uws": "^11.149.1",
-    "better-sqlite-pool": "^0.2.3",
-    "better-sqlite3": "^7.0.1",
-    "bufferutil": "^4.0.1",
-    "csv-parser": "^2.3.2",
-    "discord.js": "^12.2.0",
-    "enmap": "^5.2.4",
+    "bufferutil": "^4.0.2",
+    "discord.js": "^12.5.1",
+    "enmap": "^5.8.2",
     "erlpack": "github:discordapp/erlpack",
-    "ffmpeg-binaries": "^4.0.0",
-    "ffmpeg-static": "^2.7.0",
-    "moment": "^2.25.1",
-    "node-gyp": "^5.1.0",
-    "node-opus": "^0.3.3",
-    "opusscript": "0.0.6",
-    "prism-media": "^1.2.2",
-    "sodium": "^3.0.2",
-    "ytdl-core": "^0.29.7",
-    "ytdl-core-discord": "git+https://github.com/amishshah/ytdl-core-discord.git"
+    "moment": "^2.29.1",
+    "node-gyp": "^5.1.1",
+    "utf-8-validate": "^5.0.3"
   }
 }

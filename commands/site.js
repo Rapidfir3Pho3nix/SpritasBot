@@ -6,7 +6,7 @@ module.exports = {
     description: "Get link to The Spritas forum.",
     async execute(message, args) {
         replyToMessage(message, spritas_site);
-        console.log(message);
+        //console.log(message);
     },
 };
 

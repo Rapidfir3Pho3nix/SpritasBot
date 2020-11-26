@@ -5,6 +5,7 @@ stderr.txt
 stderr.txt.save
 stdout.txt
 config.json
+config-test.json
 .idea
 
 .DS_Store*
