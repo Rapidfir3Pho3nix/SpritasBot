@@ -22,7 +22,7 @@
     "discord.js": "^12.5.1",
     "enmap": "^5.8.2",
     "erlpack": "github:discordapp/erlpack",
-    "moment": "^2.29.1",
+    "moment": "^2.29.2",
     "node-gyp": "^5.1.1",
     "utf-8-validate": "^5.0.3"
   }
